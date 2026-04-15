@@ -37,6 +37,7 @@ export const makePublicUserController = () => {
 export const makePrivateUserController = () => {
   const userRepository = new UserRepository();
   const hashProvider = new HashProvider(); // Agora injetado corretamente para troca de senha
+  const masterKey = process.env.MASTER_KEY;
 
   const useCases = {
     listUsers: new ListUsers(userRepository),
@@ -47,5 +48,5 @@ export const makePrivateUserController = () => {
     changeRole: new ChangeUserRole(userRepository)
   };
 
-  return new PrivateUserController(useCases);
+  return new PrivateUserController(useCases, masterKey);
 };

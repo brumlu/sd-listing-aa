@@ -1,6 +1,7 @@
 export class PrivateUserController {
-  constructor(useCases) {
+  constructor(useCases, masterKey) {
     this.useCases = useCases;
+    this.masterKey = masterKey;
   }
 
   async listar(req, res) {
@@ -66,13 +67,13 @@ export class PrivateUserController {
 
   async setupAdmin(req, res) {
     try {
-      const MASTER_KEY = "123"; // No futuro, mova isso para o .env!
-      if (req.headers['x-master-key'] !== MASTER_KEY) {
-        return res.status(403).json({ message: "Acesso negado: Chave mestra incorreta." });
+      // Usa a chave injetada em vez de process.env
+      if (req.headers['x-master-key'] !== this.masterKey) {
+        return res.status(403).json({ message: "Acesso negado." });
       }
       
       await this.useCases.changeRole.promoteToAdmin(req.params.id);
-      return res.status(200).json({ message: "Promoção realizada! Você agora é um administrador." });
+      return res.status(200).json({ message: "Promovido a ADMIN" });
     } catch (err) {
       return res.status(500).json({ message: err.message });
     }
