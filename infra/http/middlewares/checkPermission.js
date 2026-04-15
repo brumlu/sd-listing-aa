@@ -1,5 +1,5 @@
 // middlewares/checkPermission.js
-import Permissions from '../src/constants/permissions.js';
+import Permissions from '../../../model/constants/permissions.js';
 
 const checkPermission = (requiredPermission) => {
   return (req, res, next) => {

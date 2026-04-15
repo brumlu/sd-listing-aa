@@ -1,5 +1,5 @@
 import prisma from '../infra/database/prisma.js'; 
-import { User } from '../model/User.js'; // Importante para a conversão
+import { User } from '../model/entities/User.js'; // Importante para a conversão
 
 export class UserRepository {
   

@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { User } from '../model/User.js'; // Importe a entidade User para o Create
+import { User } from '../model/entities/User.js'; // Importe a entidade User para o Create
 
 export class CreateUser {
   constructor(userRepository) {

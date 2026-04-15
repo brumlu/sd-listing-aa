@@ -1,4 +1,4 @@
-import Permissions from '../src/constants/permissions.js'
+import Permissions from '../../../model/constants/permissions.js'
 
 const isOwnerOrAdmin = (req, res, next) => {
     const user = req.user;

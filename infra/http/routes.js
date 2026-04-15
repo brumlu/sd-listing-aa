@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import { PublicUserController } from './controller/public_user_controller.js';
 import { PrivateUserController } from './controller/private_user_controller.js';
-import { CreateUser, LoginUser, ListUsers, UpdateUser, UpdateUserPassword, DeleteUser, ChangeUserRole } from '../../../usecase/user_usecase.js';
-import { UserRepository } from '../../../repository/user_repository.js';
-import auth from '../../../middlewares/auth.js';
-import checkPermission from '../../../middlewares/checkPermission.js';
-import isOwnerOrAdmin from '../../../middlewares/isOwnerOrAdmin.js';
-import { Permissions } from '../../../src/constants/permissions.js';
+import { CreateUser, LoginUser, ListUsers, UpdateUser, UpdateUserPassword, DeleteUser, ChangeUserRole } from '../../usecase/user_usecase.js';
+import { UserRepository } from '../../repository/user_repository.js';
+import auth from './middlewares/auth.js';
+import checkPermission from './middlewares/checkPermission.js';
+import isOwnerOrAdmin from './middlewares/isOwnerOrAdmin.js';
+import { Permissions } from '../../model/constants/permissions.js';
 
 const router = Router();
 
