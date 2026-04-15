@@ -71,4 +71,30 @@ export class UserRepository {
       createdAt: createdUser.createdAt
     });
   }
+
+  async findAll() {
+  return await prisma.users.findMany({
+    include: { 
+      role: { select: { name: true, description: true } } 
+    },
+    omit: { password: true }
+  });
+}
+
+  async update(id, data) {
+    return await prisma.users.update({
+      where: { id: Number(id) },
+      data
+    });
+  }
+
+  async delete(id) {
+    return await prisma.users.delete({
+      where: { id: Number(id) }
+    });
+  }
+
+  async findRoleByName(name) {
+    return await prisma.role.findUnique({ where: { name } });
+  }
 }

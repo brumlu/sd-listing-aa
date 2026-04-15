@@ -66,3 +66,45 @@ export class LoginUser {
     return { token };
   }
 }
+  // Listar Usuários
+export class ListUsers {
+  constructor(userRepository) { this.userRepository = userRepository; }
+  async execute() { return await this.userRepository.findAll(); }
+}
+
+// Atualizar Dados Básicos
+export class UpdateUser {
+  constructor(userRepository) { this.userRepository = userRepository; }
+  async execute(id, { name, email }) {
+    return await this.userRepository.update(id, { name, email });
+  }
+}
+
+// Atualizar Senha
+export class UpdateUserPassword {
+  constructor(userRepository) { this.userRepository = userRepository; }
+  async execute(id, password) {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    return await this.userRepository.update(id, { password: hashedPassword });
+  }
+}
+
+// Deletar Usuário
+export class DeleteUser {
+  constructor(userRepository) { this.userRepository = userRepository; }
+  async execute(id) { return await this.userRepository.delete(id); }
+}
+
+// Alterar Cargo / Admin Setup
+export class ChangeUserRole {
+  constructor(userRepository) { this.userRepository = userRepository; }
+  async execute(id, roleId) {
+    return await this.userRepository.update(id, { roleId: Number(roleId) });
+  }
+  
+  async promoteToAdmin(id) {
+    const adminRole = await this.userRepository.findRoleByName('ADMIN');
+    if (!adminRole) throw new Error("Cargo ADMIN não encontrado");
+    return await this.userRepository.update(id, { roleId: adminRole.id });
+  }
+}
