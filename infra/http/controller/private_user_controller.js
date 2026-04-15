@@ -1,6 +1,6 @@
 export class PrivateUserController {
   constructor(useCases) {
-    this.useCases = useCases; // Objeto contendo todos os use cases
+    this.useCases = useCases;
   }
 
   async listar(req, res) {
@@ -25,8 +25,11 @@ export class PrivateUserController {
 
   async atualizarSenha(req, res) {
     try {
-      await this.useCases.updatePassword.execute(req.params.id, req.body.password);
-      return res.status(200).json({ message: 'Senha atualizada' });
+      const { password } = req.body;
+      if (!password) return res.status(400).json({ message: 'A nova senha é obrigatória.' });
+
+      await this.useCases.updatePassword.execute(req.params.id, password);
+      return res.status(200).json({ message: 'Senha atualizada com sucesso' });
     } catch (err) {
       return res.status(500).json({ message: 'Erro ao atualizar senha' });
     }
@@ -41,13 +44,35 @@ export class PrivateUserController {
     }
   }
 
+  /**
+   * NOVO MÉTODO: Alterar Cargo (Admin Tool)
+   * Agora a lógica que estava no routes.js mora aqui.
+   */
+  async alterarCargo(req, res) {
+    try {
+      const { id } = req.params;
+      const { roleId } = req.body;
+
+      if (!roleId) {
+        return res.status(400).json({ message: "O roleId é obrigatório para esta operação." });
+      }
+
+      await this.useCases.changeRole.execute(id, roleId);
+      return res.status(200).json({ message: "Cargo do usuário alterado com sucesso." });
+    } catch (err) {
+      return res.status(500).json({ message: "Erro ao alterar cargo", error: err.message });
+    }
+  }
+
   async setupAdmin(req, res) {
     try {
-      const MASTER_KEY = "123";
-      if (req.headers['x-master-key'] !== MASTER_KEY) return res.status(403).send("Negado");
+      const MASTER_KEY = "123"; // No futuro, mova isso para o .env!
+      if (req.headers['x-master-key'] !== MASTER_KEY) {
+        return res.status(403).json({ message: "Acesso negado: Chave mestra incorreta." });
+      }
       
       await this.useCases.changeRole.promoteToAdmin(req.params.id);
-      return res.status(200).json({ message: "Promovido a ADMIN" });
+      return res.status(200).json({ message: "Promoção realizada! Você agora é um administrador." });
     } catch (err) {
       return res.status(500).json({ message: err.message });
     }
