@@ -28,13 +28,7 @@ export class UserRepository {
       where: { email },
       include: { 
         role: { 
-          include: { 
-            permissions: { 
-              include: { 
-                permission: true // Traz os dados da tabela Permission
-              } 
-            } 
-          } 
+          include: { permissions: { include: { permission: true } } }
         } 
       }
     });
