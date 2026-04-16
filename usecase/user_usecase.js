@@ -119,7 +119,7 @@ export class ChangeUserRole {
   }
   
   async promoteToAdmin(id) {
-    const adminRole = await this.userRepository.findRoleByName('ADMIN');
+    const adminRole = await this.userRepository.findRoleByName('ADMIN'); // Fazer arquivos de constantes para passar no lugar de passar a string, evitar Magic Strings, fazer isso também ajeitando os erros
     if (!adminRole) throw new Error("Cargo ADMIN não encontrado");
     return await this.userRepository.update(id, { roleId: adminRole.id });
   }
