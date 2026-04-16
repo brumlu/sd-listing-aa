@@ -29,11 +29,6 @@ router.patch('/atualizar-senha/:id', auth, isOwnerOrAdmin, (req, res) =>
   privateUserController.atualizarSenha(req, res)
 );
 
-// 3. Admin Tools
-router.delete('/deletar-usuario/:id', auth, checkPermission(Permissions.USER_DELETE), (req, res) => 
-  privateUserController.deletar(req, res)
-);
-
 // Note: O método 'alterarCargo' agora deve estar dentro do PrivateController
 router.patch('/admin/alterar-privilegio/:id', auth, checkPermission(Permissions.ADMIN_ACCESS), (req, res) => 
   privateUserController.alterarCargo(req, res)
