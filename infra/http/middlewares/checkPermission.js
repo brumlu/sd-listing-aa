@@ -1,4 +1,3 @@
-// middlewares/checkPermission.js
 import Permissions from '../../../model/constants/permissions.js';
 
 const checkPermission = (requiredPermission) => {
@@ -11,8 +10,6 @@ const checkPermission = (requiredPermission) => {
       });
     }
 
-    // LÓGICA DE SUPER USUÁRIO:
-    // Verifica se ele tem a permissão master OU a permissão específica
     const isSuperUser = userPermissions.includes(Permissions.ADMIN_ACCESS);
     const hasSpecificPermission = userPermissions.includes(requiredPermission);
 
@@ -20,7 +17,6 @@ const checkPermission = (requiredPermission) => {
       return next(); // Acesso liberado
     }
 
-    // Se não for super usuário nem tiver a permissão específica
     return res.status(403).json({ 
       message: `Acesso negado: Requer privilégio ${requiredPermission}.` 
     });

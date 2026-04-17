@@ -16,7 +16,6 @@ const auth = (req, res, next) => {
     }
 
     try {
-        // Verifica se o segredo do JWT está configurado
         const JWT_SECRET = process.env.JWT_SECRET;
         if (!JWT_SECRET) {
             throw new Error('JWT_SECRET não definido no ambiente.');
@@ -40,7 +39,6 @@ const auth = (req, res, next) => {
         next();
 
     } catch (err) {
-        // Se o token estiver expirado ou a assinatura for inválida
         return res.status(403).json({ message: 'Acesso negado: Token inválido ou expirado.' });
     }
 };
