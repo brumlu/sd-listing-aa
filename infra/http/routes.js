@@ -4,6 +4,8 @@ import auth from './middlewares/auth.js';
 import checkPermission from './middlewares/checkPermission.js';
 import isOwnerOrAdmin from './middlewares/isOwnerOrAdmin.js';
 import { Permissions } from '../../model/constants/permissions.js';
+import { validate } from './middlewares/validator.js';
+import { createUserSchema, loginUserSchema } from '../schemas/user_schemas.js';
 
 const router = Router();
 
@@ -11,8 +13,8 @@ const publicUserController = makePublicUserController();
 const privateUserController = makePrivateUserController();
 
 // --- ROTAS PUBLICAS ---
-router.post('/cadastro', (req, res) => publicUserController.cadastro(req, res));
-router.post('/login', (req, res) => publicUserController.login(req, res));
+router.post('/cadastro', validate(createUserSchema), (req, res) => publicUserController.cadastro(req, res));
+router.post('/login', validate(loginUserSchema), (req, res) => publicUserController.login(req, res));
 
 // --- ROTAS PRIVADAS ---
 
