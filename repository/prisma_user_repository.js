@@ -49,7 +49,7 @@ export class UserRepository {
         email: userEntity.email,
         name: userEntity.name,
         password: userEntity.password,
-        role: { connect: { name: 'Default' } } 
+        role: { connect: { name: 'Default' } }
       },
     });
 

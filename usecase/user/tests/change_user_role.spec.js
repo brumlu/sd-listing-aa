@@ -1,0 +1,123 @@
+import { it, describe, expect, beforeAll } from 'vitest'
+import request from 'supertest'
+import { app } from '../../../cmd/main.js'
+import prisma from '../../../infra/database/prisma.js'
+import Permissions from '../../../model/constants/permissions.js';
+
+describe('Change User Role (Integration)', () => {
+  let adminToken = '';
+  let commonUserId = null;
+  let adminRoleId = null;
+
+  beforeAll(async () => {
+    // 1. Limpeza profunda das tabelas (Respeitando a hierarquia de FKs)
+    // Primeiro deletamos usuários e a relação N:N, depois Roles e Permissões
+    await prisma.users.deleteMany();
+    if (prisma.rolePermission) {
+      await prisma.rolePermission.deleteMany();
+    }
+    await prisma.permission.deleteMany();
+    await prisma.role.deleteMany();
+
+    // 2. Criar a permissão mestra exigida pelo seu middleware
+    const permAdmin = await prisma.permission.create({
+      data: { name: Permissions.ADMIN_ACCESS }
+    });
+
+    // 3. Criar a Role ADMIN vinculando a permissão
+    // NOTA: Ajuste o nome 'permissions' e 'permission' abaixo 
+    // conforme os nomes das relações no seu schema.prisma
+    const roleAdmin = await prisma.role.create({
+      data: {
+        name: 'ADMIN',
+        permissions: {
+          create: [
+            {
+              permission: {
+                connect: { id: permAdmin.id }
+              }
+            }
+          ]
+        }
+      }
+    });
+    adminRoleId = roleAdmin.id;
+
+    // Criar a Role padrão para o usuário que será alterado
+    const roleDefault = await prisma.role.create({ 
+      data: { name: 'Default' } 
+    });
+
+    // 4. Criar o usuário que servirá como Administrador no teste
+    const adminReg = await request(app).post('/cadastro').send({
+      name: 'Luca Admin',
+      email: 'admin.integracao@teste.com',
+      password: 'password123'
+    });
+    
+    const adminId = adminReg.body.userId || adminReg.body.id;
+
+    // 5. Promover o usuário para ADMIN no banco de dados
+    await prisma.users.update({
+      where: { id: Number(adminId) },
+      data: { roleId: adminRoleId }
+    });
+
+    // 6. Realizar o Login do Admin
+    // O seu UseCase de login deve usar o repository findByEmailWithPermissions
+    // e injetar o array ['ADMIN_ACCESS'] dentro do token JWT.
+    const loginRes = await request(app).post('/login').send({
+      email: 'admin.integracao@teste.com',
+      password: 'password123'
+    });
+    
+    adminToken = loginRes.body.token;
+
+    // 7. Criar o usuário comum que terá a role alterada (o alvo do teste)
+    const userRes = await request(app).post('/cadastro').send({
+      name: 'Usuário Alvo',
+      email: 'alvo@teste.com',
+      password: 'password123'
+    });
+    
+    commonUserId = userRes.body.userId || userRes.body.id;
+  });
+
+  it('deve permitir que um administrador altere a role de outro usuário', async () => {
+    // Rota corrigida conforme sua estrutura atual
+    const response = await request(app)
+      .patch(`/admin/alterar-privilegio/${commonUserId}`) 
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({
+        roleId: adminRoleId // Promovendo o usuário comum a ADMIN também
+      });
+
+    // Log auxiliar caso o 403 persista para debug de permissões
+    if (response.status === 403) {
+      console.log('--- Falha de Permissão ---');
+      console.log('Mensagem:', response.body.message);
+      console.log('Verifique se o token contém a permissão:', Permissions.ADMIN_ACCESS);
+    }
+
+    expect(response.status).toBe(200);
+    expect(response.body.message).toMatch(/sucesso/i);
+  });
+
+  it('deve verificar no banco de dados se a role do usuário foi realmente alterada', async () => {
+    const updatedUser = await prisma.users.findUnique({
+      where: { id: Number(commonUserId) },
+      include: { role: true }
+    });
+
+    expect(updatedUser.roleId).toBe(adminRoleId);
+    expect(updatedUser.role.name).toBe('ADMIN');
+  });
+
+  it('deve impedir que um usuário sem token acesse a rota (401)', async () => {
+    const response = await request(app)
+      .patch(`/admin/alterar-privilegio/${commonUserId}`)
+      .send({ roleId: adminRoleId });
+
+    expect(response.status).toBe(401);
+  });
+});

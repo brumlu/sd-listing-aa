@@ -28,7 +28,7 @@ export class PublicUserController {
       // await é obrigatório
       const result = await this.loginUserUseCase.execute({ email, password });
 
-      return res.status(200).send(result.token);
+      return res.status(200).json({ token: result.token });
 
     } catch (err) {
       // Log de erro no console

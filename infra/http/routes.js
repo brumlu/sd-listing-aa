@@ -25,6 +25,7 @@ router.get('/listar-usuarios', auth, checkPermission(Permissions.USER_READ), (re
 router.patch('/atualizar-usuario/:id', auth, isOwnerOrAdmin, (req, res) => 
   privateUserController.atualizar(req, res)
 );
+
 router.patch('/atualizar-senha/:id', auth, isOwnerOrAdmin, (req, res) => 
   privateUserController.atualizarSenha(req, res)
 );

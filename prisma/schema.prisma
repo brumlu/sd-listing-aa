@@ -21,7 +21,7 @@ model Users {
   updatedAt DateTime @updatedAt
 
   roleId    Int
-  role      Role     @relation(fields: [roleId], references: [id])
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
 
   @@map("users")
 }

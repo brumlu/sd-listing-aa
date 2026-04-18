@@ -1,4 +1,4 @@
-import { User } from '../model/entities/User.js';
+import { User } from '../../model/entities/User.js';
 
 export class CreateUser {
   constructor(userRepository, hashProvider) {

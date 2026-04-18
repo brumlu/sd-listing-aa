@@ -3,13 +3,13 @@
   "version": "1.0.0",
   "main": "index.js",
   "type": "module",
-  "scripts": {
-    "test:migrate": "dotenv -e .env.test -- npx prisma migrate deploy",
-    "test": "dotenv -e .env.test -- vitest run",
-    "test:reset": "dotenv -e .env.test -- npx prisma migrate reset",
-    "test:watch": "dotenv -e .env.test -- vitest",
-    "test:studio": "dotenv -e .env.test -- npx prisma studio"
-  },
+"scripts": {
+  "test:migrate": "dotenv -e .env.test -- npx prisma migrate deploy",
+  "test:reset": "dotenv -e .env.test -- npx prisma migrate reset",
+  "test:studio": "dotenv -e .env.test -- npx prisma studio",
+  "test": "dotenv -e .env.test -- vitest run --pool=forks --fileParallelism=false",
+  "test:watch": "dotenv -e .env.test -- vitest"
+},
   "keywords": [],
   "author": "",
   "license": "ISC",

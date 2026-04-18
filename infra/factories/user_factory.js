@@ -12,7 +12,7 @@ import {
   UpdateUserPassword, 
   DeleteUser, 
   ChangeUserRole 
-} from '../../usecase/user_usecase.js';
+} from '../../usecase/user/user_usecase.js';
 
 // 3. Camada de Adaptadores (Entrada/Saída)
 import { PublicUserController } from '../http/controller/public_user_controller.js';
