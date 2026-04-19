@@ -26,6 +26,18 @@ model Users {
   @@map("users")
 }
 
+model Products {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  price       Decimal  @db.Decimal(10, 2) // Total de 10 dígitos, sendo 2 decimais
+  stock       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("products")
+}
+
 model Role {
   id          Int      @id @default(autoincrement())
   name        String   @unique

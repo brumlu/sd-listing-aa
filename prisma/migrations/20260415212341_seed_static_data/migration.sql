@@ -12,6 +12,19 @@ CREATE TABLE "users" (
 );
 
 -- CreateTable
+CREATE TABLE "products" (
+    "id" SERIAL NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "price" DECIMAL(10,2) NOT NULL,
+    "stock" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "products_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "roles" (
     "id" SERIAL NOT NULL,
     "name" TEXT NOT NULL,
@@ -62,7 +75,11 @@ INSERT INTO "permissions" ("name", "description") VALUES
 ('ADMIN_ACCESS', 'Acesso total ao sistema'),
 ('USER_READ', 'Permissão para ler dados de usuário'),
 ('USER_UPDATE', 'Permissão para atualizar dados de usuário'),
-('USER_DELETE', 'Permissão para deletar usuários')
+('USER_DELETE', 'Permissão para deletar usuários'),
+('PRODUCT_CREATE', 'Permissão para criar produtos'),
+('PRODUCT_READ', 'Permissão para visualizar produtos'),
+('PRODUCT_UPDATE', 'Permissão para editar produtos e estoque'),
+('PRODUCT_DELETE', 'Permissão para excluir produtos')
 ON CONFLICT ("name") DO NOTHING;
 
 -- 2. Inserir os Cargos (Roles)
@@ -75,11 +92,11 @@ ON CONFLICT ("name") DO NOTHING;
 -- Vincula ADMIN_ACCESS (ID 1) ao ADMIN (ID 1)
 INSERT INTO "role_permissions" ("roleId", "permissionId") 
 SELECT r.id, p.id FROM "roles" r, "permissions" p 
-WHERE r.name = 'ADMIN' AND p.name = 'ADMIN_ACCESS'
+WHERE r.name = 'ADMIN' AND p.name IN ('ADMIN_ACCESS', 'PRODUCT_CREATE', 'PRODUCT_READ', 'PRODUCT_UPDATE', 'PRODUCT_DELETE')
 ON CONFLICT DO NOTHING;
 
 -- 4. Vincular Permissões ao Default (Usuário comum)
 INSERT INTO "role_permissions" ("roleId", "permissionId")
 SELECT r.id, p.id FROM "roles" r, "permissions" p 
-WHERE r.name = 'Default' AND p.name IN ('USER_READ', 'USER_UPDATE', 'USER_DELETE')
+WHERE r.name = 'Default' AND p.name IN ('USER_READ', 'USER_UPDATE', 'USER_DELETE', 'PRODUCT_READ')
 ON CONFLICT DO NOTHING;

@@ -2,12 +2,15 @@ import { ZodError } from 'zod';
 
 export const validate = (schema) => (req, res, next) => {
   try {
-    schema.parse(req.body);
+    // Captura os dados transformados pelo Zod (importante para converter strings em números)
+    const validatedData = schema.parse(req.body);
+
+    // Substitui o corpo da requisição pelos dados tipados corretamente
+    req.body = validatedData;
+
     next();
   } catch (error) {
     if (error instanceof ZodError) {
-      // Adicionamos uma verificação de segurança (Optional Chaining) 
-      // e um fallback para array vazio caso error.errors seja undefined
       const details = (error.errors || []).map(err => ({
         path: err.path ? err.path[0] : 'campo',
         message: err.message
@@ -20,8 +23,6 @@ export const validate = (schema) => (req, res, next) => {
       });
     }
 
-    // Se não for um erro do Zod, jogue para o Error Handler Global 
-    // em vez de retornar 500 manualmente aqui.
     next(error);
   }
 };
