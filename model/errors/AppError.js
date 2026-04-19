@@ -7,7 +7,6 @@ export class AppError extends Error {
   }
 }
 
-// model/errors/UserErrors.js
 export class UserAlreadyExistsError extends AppError {
   constructor() { super('Este email já está em uso.', 409); }
 }
