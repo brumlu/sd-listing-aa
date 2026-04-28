@@ -5,11 +5,11 @@ import { app } from '../../../cmd/main.js';
 import prisma from '../../../infra/database/prisma.js';
 
 describe('Update Product Price (Integration)', () => {
-  let adminToken;
+  let adminCookie; // Substituído de adminToken para adminCookie
   let productId;
 
   beforeAll(async () => {
-    // 1. Limpeza total para evitar conflitos de testes anteriores
+    // 1. Limpeza total para evitar conflitos (Filhos para Pais)
     await prisma.rolePermission.deleteMany();
     await prisma.products.deleteMany();
     await prisma.users.deleteMany();
@@ -43,7 +43,7 @@ describe('Update Product Price (Integration)', () => {
     });
     productId = product.id;
 
-    // 4. Criar Usuário Admin e logar para obter o Token
+    // 4. Criar Usuário Admin e realizar login para capturar o Cookie
     const hashedPassword = await bcrypt.hash('password123', 8);
     await prisma.users.create({
       data: {
@@ -59,7 +59,8 @@ describe('Update Product Price (Integration)', () => {
       password: 'password123'
     });
 
-    adminToken = loginResponse.body.token;
+    // Captura o cabeçalho 'set-cookie' enviado pela API
+    adminCookie = loginResponse.header['set-cookie'];
   });
 
   it('deve ser capaz de atualizar apenas o preço de um produto', async () => {
@@ -67,7 +68,7 @@ describe('Update Product Price (Integration)', () => {
 
     const response = await request(app)
       .patch(`/products/${productId}/price`)
-      .set('Authorization', `Bearer ${adminToken}`)
+      .set('Cookie', adminCookie) // Enviando o cookie em vez do Bearer token
       .send({ price: newPrice });
 
     expect(response.status).toBe(200);
@@ -83,12 +84,11 @@ describe('Update Product Price (Integration)', () => {
   });
 
   it('deve retornar 404 ao tentar atualizar preço de produto inexistente', async () => {
-    // Usamos um UUID no formato correto para evitar erro 500 de sintaxe do banco
     const fakeId = '00000000-0000-0000-0000-000000000000';
 
     const response = await request(app)
       .patch(`/products/${fakeId}/price`)
-      .set('Authorization', `Bearer ${adminToken}`)
+      .set('Cookie', adminCookie)
       .send({ price: 100.00 });
 
     expect(response.status).toBe(404);
@@ -97,7 +97,7 @@ describe('Update Product Price (Integration)', () => {
   it('não deve atualizar preço se o valor for negativo (Zod)', async () => {
     const response = await request(app)
       .patch(`/products/${productId}/price`)
-      .set('Authorization', `Bearer ${adminToken}`)
+      .set('Cookie', adminCookie)
       .send({ price: -50.00 });
 
     expect(response.status).toBe(400);

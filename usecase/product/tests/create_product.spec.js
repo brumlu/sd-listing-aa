@@ -5,7 +5,7 @@ import { app } from '../../../cmd/main.js';
 import prisma from '../../../infra/database/prisma.js';
 
 describe('Create Product (Integration)', () => {
-  let adminToken;
+  let authCookie;
 
   beforeAll(async () => {
     // 1. Limpeza total (Respeitando a hierarquia do seu schema.prisma)
@@ -51,13 +51,14 @@ describe('Create Product (Integration)', () => {
       email: 'admin@teste.com',
       password: 'password123'
     });
+    
+    const cookies = loginResponse.header['set-cookie'];
 
     // Se o login falhar aqui, o teste vai avisar antes de começar
-    if (!loginResponse.body.token) {
-      throw new Error(`Falha ao gerar token: ${JSON.stringify(loginResponse.body)}`);
+    if (!cookies) {
+      throw new Error(`Falha ao gerar cookie de autenticação: ${JSON.stringify(loginResponse.body)}`);
     }
-
-    adminToken = loginResponse.body.token;
+    authCookie = cookies;
   });
 
   const newProduct = {
@@ -70,7 +71,7 @@ describe('Create Product (Integration)', () => {
   it('deve ser capaz de cadastrar um novo produto como admin', async () => {
     const response = await request(app)
       .post('/products')
-      .set('Authorization', `Bearer ${adminToken}`)
+      .set('Cookie', authCookie)
       .send(newProduct);
 
     expect(response.status).toBe(201);
@@ -92,7 +93,7 @@ describe('Create Product (Integration)', () => {
   it('não deve cadastrar produto com preço negativo', async () => {
     const response = await request(app)
       .post('/products')
-      .set('Authorization', `Bearer ${adminToken}`)
+      .set('Cookie', authCookie)
       .send({
         ...newProduct,
         price: -10.00
@@ -106,7 +107,7 @@ describe('Create Product (Integration)', () => {
   it('não deve cadastrar se faltarem dados obrigatórios (Zod)', async () => {
     const response = await request(app)
       .post('/products')
-      .set('Authorization', `Bearer ${adminToken}`)
+      .set('Cookie', authCookie)
       .send({
         description: 'Faltando nome e preço'
       });

@@ -5,11 +5,11 @@ import { app } from '../../../cmd/main.js';
 import prisma from '../../../infra/database/prisma.js';
 
 describe('Update Product General (Integration)', () => {
-  let adminToken;
+  let adminCookie; // Substituído de adminToken para adminCookie
   let productId;
 
   beforeAll(async () => {
-    // 1. Limpeza total do banco (Respeitando as chaves estrangeiras)
+    // 1. Limpeza total do banco (Ordem correta: filhos para pais)
     await prisma.rolePermission.deleteMany();
     await prisma.products.deleteMany();
     await prisma.users.deleteMany();
@@ -44,7 +44,7 @@ describe('Update Product General (Integration)', () => {
     });
     productId = product.id;
 
-    // 4. Criar Admin e gerar Token de acesso
+    // 4. Criar Admin e realizar login para capturar o Cookie
     const hashedPassword = await bcrypt.hash('password123', 8);
     await prisma.users.create({
       data: {
@@ -60,7 +60,8 @@ describe('Update Product General (Integration)', () => {
       password: 'password123'
     });
 
-    adminToken = loginResponse.body.token;
+    // Captura o cabeçalho 'set-cookie' enviado pela API
+    adminCookie = loginResponse.header['set-cookie'];
   });
 
   it('deve ser capaz de atualizar todos os campos de um produto usando PATCH', async () => {
@@ -72,8 +73,8 @@ describe('Update Product General (Integration)', () => {
     };
 
     const response = await request(app)
-      .patch(`/products/${productId}`) // Alterado para PATCH
-      .set('Authorization', `Bearer ${adminToken}`)
+      .patch(`/products/${productId}`)
+      .set('Cookie', adminCookie) // Enviando o cookie em vez do Bearer token
       .send(updatedData);
 
     expect(response.status).toBe(200);
@@ -91,8 +92,8 @@ describe('Update Product General (Integration)', () => {
 
   it('deve ser capaz de atualizar apenas o nome via PATCH, mantendo os outros campos', async () => {
     const response = await request(app)
-      .patch(`/products/${productId}`) // Alterado para PATCH
-      .set('Authorization', `Bearer ${adminToken}`)
+      .patch(`/products/${productId}`)
+      .set('Cookie', adminCookie)
       .send({ name: 'Nome Apenas' });
 
     expect(response.status).toBe(200);
@@ -107,11 +108,11 @@ describe('Update Product General (Integration)', () => {
 
   it('não deve permitir atualizar com dados inválidos (Zod) via PATCH', async () => {
     const response = await request(app)
-      .patch(`/products/${productId}`) // Alterado para PATCH
-      .set('Authorization', `Bearer ${adminToken}`)
+      .patch(`/products/${productId}`)
+      .set('Cookie', adminCookie)
       .send({
         price: "valor_invalido", 
-        stock: -5              
+        stock: -5              
       });
 
     expect(response.status).toBe(400);
@@ -120,8 +121,8 @@ describe('Update Product General (Integration)', () => {
 
   it('deve retornar 404 para produto inexistente no PATCH', async () => {
     const response = await request(app)
-      .patch('/products/00000000-0000-0000-0000-000000000000') // Alterado para PATCH
-      .set('Authorization', `Bearer ${adminToken}`)
+      .patch('/products/00000000-0000-0000-0000-000000000000')
+      .set('Cookie', adminCookie)
       .send({ name: 'Inexistente' });
 
     expect(response.status).toBe(404);

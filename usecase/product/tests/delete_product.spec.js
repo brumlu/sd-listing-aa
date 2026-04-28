@@ -5,19 +5,19 @@ import { app } from '../../../cmd/main.js';
 import prisma from '../../../infra/database/prisma.js';
 
 describe('Delete Product (Integration)', () => {
-  let adminToken;
-  let userToken;
+  let adminCookie;
+  let userCookie;
   let productIdToDelete;
 
   beforeAll(async () => {
-    // 1. Limpeza total
+    // 1. Limpeza total (Ordem correta: do filho para o pai)
     await prisma.rolePermission.deleteMany();
     await prisma.products.deleteMany();
     await prisma.users.deleteMany();
     await prisma.role.deleteMany();
     await prisma.permission.deleteMany();
 
-    // 2. Criar Role ADMIN (com permissão de delete) e Role Default (sem delete)
+    // 2. Criar Role ADMIN (com delete) e Role Default (sem delete)
     const adminRole = await prisma.role.create({
       data: {
         name: 'ADMIN',
@@ -41,30 +41,30 @@ describe('Delete Product (Integration)', () => {
     });
     productIdToDelete = product.id;
 
-    // 4. Criar Usuários e Tokens
+    // 4. Criar Usuários e Capturar Cookies
     const hashedPassword = await bcrypt.hash('password123', 8);
 
-    // Criar Admin
+    // Login Admin
     await prisma.users.create({
       data: { name: 'Admin', email: 'admin@del.com', password: hashedPassword, roleId: adminRole.id }
     });
     const adminLogin = await request(app).post('/login').send({ email: 'admin@del.com', password: 'password123' });
-    adminToken = adminLogin.body.token;
+    adminCookie = adminLogin.header['set-cookie'];
 
-    // Criar User Comum
+    // Login User Comum
     await prisma.users.create({
       data: { name: 'User', email: 'user@del.com', password: hashedPassword, roleId: defaultRole.id }
     });
     const userLogin = await request(app).post('/login').send({ email: 'user@del.com', password: 'password123' });
-    userToken = userLogin.body.token;
+    userCookie = userLogin.header['set-cookie'];
   });
 
   it('não deve permitir que um usuário sem permissão delete um produto', async () => {
     const response = await request(app)
       .delete(`/products/${productIdToDelete}`)
-      .set('Authorization', `Bearer ${userToken}`);
+      .set('Cookie', userCookie); // Uso simplificado do Cookie
 
-    expect(response.status).toBe(403); // Forbidden
+    expect(response.status).toBe(403); 
     
     // Garantir que o produto ainda existe no banco
     const productExists = await prisma.products.findUnique({ where: { id: productIdToDelete } });
@@ -74,7 +74,7 @@ describe('Delete Product (Integration)', () => {
   it('deve ser capaz de deletar um produto como admin', async () => {
     const response = await request(app)
       .delete(`/products/${productIdToDelete}`)
-      .set('Authorization', `Bearer ${adminToken}`);
+      .set('Cookie', adminCookie); // Uso simplificado do Cookie
 
     expect(response.status).toBe(200);
     expect(response.body.message).toMatch(/sucesso/i);
@@ -87,9 +87,8 @@ describe('Delete Product (Integration)', () => {
   it('deve retornar 404 ao tentar deletar um produto que não existe', async () => {
     const response = await request(app)
       .delete('/products/00000000-0000-0000-0000-000000000000')
-      .set('Authorization', `Bearer ${adminToken}`);
+      .set('Cookie', adminCookie);
 
-    // Se o seu UseCase lança um erro de "não encontrado", deve ser 404
     expect(response.status).toBe(404);
   });
 });

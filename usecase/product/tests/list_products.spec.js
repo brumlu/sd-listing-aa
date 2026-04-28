@@ -5,10 +5,10 @@ import { app } from '../../../cmd/main.js';
 import prisma from '../../../infra/database/prisma.js';
 
 describe('List Products (Integration)', () => {
-  let userToken;
+  let userCookie; // Agora armazenamos o cookie de sessão
 
   beforeAll(async () => {
-    // 1. Limpeza total das tabelas relacionadas
+    // 1. Limpeza total (Ordem: filhos -> pais)
     await prisma.rolePermission.deleteMany();
     await prisma.products.deleteMany();
     await prisma.users.deleteMany();
@@ -42,7 +42,7 @@ describe('List Products (Integration)', () => {
       ]
     });
 
-    // 4. Criar um usuário comum e pegar o token
+    // 4. Criar um usuário comum e realizar o login para capturar o cookie
     const hashedPassword = await bcrypt.hash('password123', 8);
     await prisma.users.create({
       data: {
@@ -58,19 +58,19 @@ describe('List Products (Integration)', () => {
       password: 'password123'
     });
 
-    userToken = loginResponse.body.token;
+    // Capturamos o array de cookies do cabeçalho da resposta
+    userCookie = loginResponse.header['set-cookie'];
   });
 
   it('deve ser capaz de listar todos os produtos cadastrados', async () => {
     const response = await request(app)
       .get('/products')
-      .set('Authorization', `Bearer ${userToken}`);
+      .set('Cookie', userCookie); // Enviamos o cookie em vez do header Authorization
 
     expect(response.status).toBe(200);
     expect(Array.isArray(response.body.products)).toBe(true);
     expect(response.body.products.length).toBe(3);
     
-    // Verifica se os campos essenciais estão presentes no primeiro item
     const firstProduct = response.body.products[0];
     expect(firstProduct).toHaveProperty('id');
     expect(firstProduct).toHaveProperty('name');
@@ -89,7 +89,7 @@ describe('List Products (Integration)', () => {
 
     const response = await request(app)
       .get('/products')
-      .set('Authorization', `Bearer ${userToken}`);
+      .set('Cookie', userCookie); // Mantendo a sessão via cookie
 
     expect(response.status).toBe(200);
     expect(response.body.products).toEqual([]);

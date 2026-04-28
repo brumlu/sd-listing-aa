@@ -1,18 +1,12 @@
 import jwt from 'jsonwebtoken';
 
-/**
- * Middleware de Autenticação
- * Responsável por verificar a validade do token JWT e 
- * disponibilizar os dados do usuário e suas permissões para o restante da aplicação.
- */
-
 const auth = (req, res, next) => {
-    // Recupera o token do header Authorization (padrão 'Bearer <token>')
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+    // Agora recuperamos o token diretamente do cookie-parser
+    // O nome do cookie deve ser o mesmo que você definiu no res.cookie do login
+    const token = req.cookies.api_token;
 
     if (!token) {
-        return res.status(401).json({ message: 'Acesso negado: Token não fornecido.' });
+        return res.status(401).json({ message: 'Acesso negado: Sessão não encontrada ou expirada.' });
     }
 
     try {
@@ -21,24 +15,23 @@ const auth = (req, res, next) => {
             throw new Error('JWT_SECRET não definido no ambiente.');
         }
 
-        // Valida a assinatura do token
+        // Valida a assinatura do token contido no cookie
         const decoded = jwt.verify(token, JWT_SECRET);
 
         /**
-         * Anexa as informações ao objeto de requisição.
-         * Com a arquitetura RBAC, o 'decoded' deve conter:
-         * - id: ID do usuário no banco
-         * - permissions: Array de strings com os nomes das permissões (ex: ['USER_READ', 'ADMIN_ACCESS'])
+         * Anexa as informações ao objeto de requisição para os middlewares de RBAC.
          */
         req.user = {
             id: decoded.id,
-            permissions: decoded.permissions || [] // Garante que seja um array mesmo que vazio
+            // Mantendo a lógica de permissões que você já utiliza
+            permissions: decoded.permissions || [] 
         };
 
-        // Prossegue para o próximo middleware ou controller
         next();
 
     } catch (err) {
+        // Se o token for inválido ou expirar, é uma boa prática limpar o cookie do navegador
+        res.clearCookie('safewoman_token');
         return res.status(403).json({ message: 'Acesso negado: Token inválido ou expirado.' });
     }
 };
