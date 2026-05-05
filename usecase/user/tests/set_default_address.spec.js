@@ -1,17 +1,24 @@
-import { it, describe, expect, beforeAll } from 'vitest';
+import { it, describe, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import { app } from '../../../cmd/main.js';
 import prisma from '../../../infra/database/prisma.js';
+import { SetDefaultAddressUseCase } from '../user_usecase.js'
+import { UserRepository } from '../../../repository/prisma_user_repository.js';
+import { AddressRepository } from '../../../repository/prisma_address_repository.js';
 
-describe('Set Default Address (Integration)', () => {
+describe('Set Default Address (Use Case & Route)', () => {
   let userCookie = null;
   let userId = null;
   let addressId = null;
+  let sut; // Use Case (System Under Test)
+  let userRepository;
+  let addressRepository;
 
   const testEmail = `luca.${Date.now()}@teste.com`;
   const testPassword = 'password123';
 
   beforeAll(async () => {
+    // 1. Limpeza e Setup Inicial
     await prisma.address.deleteMany();
     await prisma.users.deleteMany();
     
@@ -21,6 +28,7 @@ describe('Set Default Address (Integration)', () => {
       create: { name: 'Default' }
     });
 
+    // 2. Criação de Usuário e Login para Rota
     const registerRes = await request(app).post('/register').send({
       name: 'Luca Teste',
       email: testEmail,
@@ -34,6 +42,7 @@ describe('Set Default Address (Integration)', () => {
     });
     userCookie = loginRes.header['set-cookie'];
 
+    // 3. Criação de um endereço inicial via rota
     const addressRes = await request(app)
       .post('/addresses')
       .set('Cookie', userCookie)
@@ -43,55 +52,81 @@ describe('Set Default Address (Integration)', () => {
         neighborhood: 'Centro',
         city: 'Salvador',
         state: 'BA',
-        zipCode: '40000-000',
+        zipCode: '40000000',
         userId: userId
       });
     
-    // Captura flexível do ID
-    addressId = addressRes.body.id || addressRes.body.addressId || addressRes.body.address?.id;
+    addressId = addressRes.body.id || addressRes.body.address?.id;
+
+    // 4. Instância do Use Case para testes de lógica
+    userRepository = new UserRepository();
+    addressRepository = new AddressRepository();
+    sut = new SetDefaultAddressUseCase(userRepository, addressRepository);
   });
 
-  it('deve ser capaz de definir um endereço como padrão', async () => {
-    expect(addressId).toBeDefined();
+  afterAll(async () => {
+    await prisma.$disconnect();
+  });
 
+  // --- TESTE DO USE CASE ---
+  it('deve ser capaz de definir um endereço padrão via Use Case', async () => {
+    // Criamos um novo endereço para testar a troca via Use Case
+    const newAddr = await prisma.address.create({
+      data: {
+        userId,
+        street: 'Rua do Use Case',
+        number: '50',
+        neighborhood: 'Bonfim',
+        city: 'Salvador',
+        state: 'BA',
+        zipCode: '40415000'
+      }
+    });
+
+    const result = await sut.execute({
+      userId: userId,
+      addressId: newAddr.id
+    });
+
+    expect(result.isRight()).toBe(true);
+
+    const userInDb = await prisma.users.findUnique({ where: { id: userId } });
+    expect(userInDb.defaultAddressId).toBe(newAddr.id);
+  });
+
+  // --- TESTES DA ROTA (PATCH /users/default-address) ---
+  it('PATCH /users/default-address - deve definir o endereço padrão via ROTA HTTP', async () => {
     const response = await request(app)
       .patch('/users/default-address')
       .set('Cookie', userCookie)
       .send({ addressId });
 
-    // Se falhar, logamos o erro para saber se foi "Não pertence" ou "Não encontrado"
-    if (response.status !== 200) console.log('ERRO 400:', response.body);
-
     expect(response.status).toBe(200);
 
     const userInDb = await prisma.users.findUnique({ where: { id: userId } });
-    // Verifique se no seu Prisma Client o campo é defaultAddressId
     expect(userInDb.defaultAddressId).toBe(addressId);
   });
 
-  it('deve retornar 401 se não estiver logado', async () => {
-    const response = await request(app)
-      .patch('/users/default-address')
-      .send({ addressId });
-    expect(response.status).toBe(401);
-  });
-
-  it('deve impedir uso de endereço de outro usuário', async () => {
-    const secondUserRes = await request(app).post('/register').send({
-      name: 'Outro',
-      email: `outro.${Date.now()}@teste.com`,
-      password: testPassword
+  it('PATCH /users/default-address - deve impedir uso de endereço de outro usuário', async () => {
+    // Cria outro usuário e outro endereço
+    const otherUser = await prisma.users.create({
+      data: {
+        name: 'Outro Usuário',
+        email: `outro.${Date.now()}@gmail.com`,
+        password: 'hash',
+        roleId: (await prisma.role.findFirst({ where: { name: 'Default' } })).id
+      }
     });
 
     const otherAddress = await prisma.address.create({
       data: {
-        street: 'Rua de Salvador',
-        number: '123',
-        neighborhood: 'Centro',
+        userId: otherUser.id,
+        street: 'Rua Alheia',
+        number: '0',
+        neighborhood: 'Desconhecido',
         city: 'Salvador',
         state: 'BA',
-        zipCode: '40000-000',
-        userId: secondUserRes.body.userId
+        zipCode: '40000000'
       }
     });
 
@@ -100,15 +135,26 @@ describe('Set Default Address (Integration)', () => {
       .set('Cookie', userCookie)
       .send({ addressId: otherAddress.id });
 
+    // O Use Case retorna NotAllowedError, que o seu controller deve mapear para 403
     expect(response.status).toBe(403);
   });
 
-  it('deve retornar 404 para endereço inexistente', async () => {
+  it('PATCH /users/default-address - deve retornar 404 para endereço inexistente', async () => {
+    const fakeUuid = '00000000-0000-0000-0000-000000000000';
+    
     const response = await request(app)
       .patch('/users/default-address')
       .set('Cookie', userCookie)
-      .send({ addressId: '00000000-0000-0000-0000-000000000000' });
+      .send({ addressId: fakeUuid });
 
     expect(response.status).toBe(404);
+  });
+
+  it('PATCH /users/default-address - deve retornar 401 se não houver cookie', async () => {
+    const response = await request(app)
+      .patch('/users/default-address')
+      .send({ addressId });
+
+    expect(response.status).toBe(401);
   });
 });
