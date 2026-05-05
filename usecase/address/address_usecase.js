@@ -46,33 +46,6 @@ export class ListUserAddressesUseCase {
   }
 }
 
-export class SetDefaultAddressUseCase {
-  constructor(userRepository, addressRepository) {
-    this.userRepository = userRepository;
-    this.addressRepository = addressRepository;
-  }
-
-  async execute({ userId, addressId }) {
-    // 1. Validar se o endereço existe
-    const address = await this.addressRepository.findById(addressId);
-    
-    if (!address) {
-      return left(new ResourceNotFoundError("Endereço"));
-    }
-
-    // 2. Verificar se pertence ao usuário
-    // Usando String() para evitar erros de comparação de tipos UUID do Prisma
-    if (String(address.userId) !== String(userId)) {
-      return left(new NotAllowedError("Este endereço não pertence a este usuário"));
-    }
-
-    // 3. Atualizar o ponteiro no usuário
-    await this.userRepository.updateDefaultAddress(userId, addressId);
-    
-    return right(null);
-  }
-}
-
 export class DeleteAddressUseCase {
   constructor(addressRepository, userRepository) {
     this.addressRepository = addressRepository;
