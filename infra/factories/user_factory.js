@@ -9,16 +9,19 @@ import {
   UpdateUser, 
   UpdateUserPassword, 
   DeleteUser, 
-  ChangeUserRole 
+  ChangeUserRole,
+  SetDefaultAddressUseCase
 } from '../../usecase/user/user_usecase.js';
 
 import { PublicUserController } from '../http/controller/public_user_controller.js';
 import { PrivateUserController } from '../http/controller/private_user_controller.js';
+import { AddressRepository } from '../../repository/prisma_address_repository.js';
 
 // Instâncias de Infra (Compartilhadas para economizar memória)
 const userRepository = new UserRepository();
 const hashProvider = new HashProvider();
 const tokenProvider = new TokenProvider();
+const addressRepository = new AddressRepository();
 
 export const makePublicUserController = () => {
   // Injeção nos casos de uso públicos
@@ -38,7 +41,8 @@ export const makePrivateUserController = () => {
     updateUser: new UpdateUser(userRepository),
     updatePassword: new UpdateUserPassword(userRepository, hashProvider),
     deleteUser: new DeleteUser(userRepository),
-    changeRole: new ChangeUserRole(userRepository)
+    changeRole: new ChangeUserRole(userRepository),
+    setDefaultAddress: new SetDefaultAddressUseCase(userRepository, addressRepository)
   };
 
   return new PrivateUserController(useCases, masterKey);

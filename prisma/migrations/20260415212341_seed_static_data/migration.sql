@@ -1,7 +1,28 @@
--- Habilita a extensão de UUID se ainda não estiver ativa (comum no Postgres antigo, no 13+ já costuma vir nativo)
+-- 1. ESTRUTURA (TABELAS)
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- CreateTable
+CREATE TABLE "roles" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "roles_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE "permissions" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "permissions_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE "role_permissions" (
+    "roleId" UUID NOT NULL,
+    "permissionId" UUID NOT NULL,
+    CONSTRAINT "role_permissions_pkey" PRIMARY KEY ("roleId","permissionId")
+);
+
 CREATE TABLE "users" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "name" TEXT,
@@ -10,11 +31,25 @@ CREATE TABLE "users" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "roleId" UUID NOT NULL,
-
+    "default_address_id" UUID,
     CONSTRAINT "users_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable
+CREATE TABLE "addresses" (
+    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
+    "street" TEXT NOT NULL,
+    "number" TEXT NOT NULL,
+    "complement" TEXT,
+    "neighborhood" TEXT NOT NULL,
+    "city" TEXT NOT NULL,
+    "state" TEXT NOT NULL,
+    "zip_code" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+    "userId" UUID NOT NULL,
+    CONSTRAINT "addresses_pkey" PRIMARY KEY ("id")
+);
+
 CREATE TABLE "products" (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "name" TEXT NOT NULL,
@@ -23,56 +58,21 @@ CREATE TABLE "products" (
     "stock" INTEGER NOT NULL DEFAULT 0,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-
     CONSTRAINT "products_pkey" PRIMARY KEY ("id")
 );
 
--- CreateTable
-CREATE TABLE "roles" (
-    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-    "name" TEXT NOT NULL,
-    "description" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "roles_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "permissions" (
-    "id" UUID NOT NULL DEFAULT gen_random_uuid(),
-    "name" TEXT NOT NULL,
-    "description" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "permissions_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable (Tabela intermediária com FKs do tipo UUID)
-CREATE TABLE "role_permissions" (
-    "roleId" UUID NOT NULL,
-    "permissionId" UUID NOT NULL,
-
-    CONSTRAINT "role_permissions_pkey" PRIMARY KEY ("roleId","permissionId")
-);
-
--- CreateIndex
+-- 2. ÍNDICES E RELAÇÕES
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
+CREATE UNIQUE INDEX "users_default_address_id_key" ON "users"("default_address_id");
 CREATE UNIQUE INDEX "roles_name_key" ON "roles"("name");
 CREATE UNIQUE INDEX "permissions_name_key" ON "permissions"("name");
 
--- AddForeignKey
-ALTER TABLE "users" ADD CONSTRAINT "users_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "roles"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
+ALTER TABLE "users" ADD CONSTRAINT "users_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "roles"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "addresses" ADD CONSTRAINT "addresses_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "role_permissions" ADD CONSTRAINT "role_permissions_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "roles"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "role_permissions" ADD CONSTRAINT "role_permissions_permissionId_fkey" FOREIGN KEY ("permissionId") REFERENCES "permissions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
----
---- SEED DATA (A parte do INSERT continua funcionando dinamicamente)
----
-
+-- 3. SEED DATA (POPULAR O BANCO)
 -- Inserir as Permissões
 INSERT INTO "permissions" ("name", "description") VALUES 
 ('ADMIN_ACCESS', 'Acesso total ao sistema'),
@@ -91,7 +91,7 @@ INSERT INTO "roles" ("name", "description") VALUES
 ('Default', 'Usuário padrão')
 ON CONFLICT ("name") DO NOTHING;
 
--- Vincular Permissões ao ADMIN (Buscando IDs via Subquery, já que são UUIDs aleatórios)
+-- Vincular Permissões ao ADMIN
 INSERT INTO "role_permissions" ("roleId", "permissionId") 
 SELECT r.id, p.id FROM "roles" r, "permissions" p 
 WHERE r.name = 'ADMIN' AND p.name IN ('ADMIN_ACCESS', 'PRODUCT_CREATE', 'PRODUCT_READ', 'PRODUCT_UPDATE', 'PRODUCT_DELETE')

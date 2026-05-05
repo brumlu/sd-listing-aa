@@ -1,4 +1,6 @@
-import { z } from 'zod';
+import zod from 'zod';
+
+const z = zod;
 
 export const createProductSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),

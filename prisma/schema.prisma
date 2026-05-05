@@ -8,23 +8,46 @@ datasource db {
 }
 
 model Users {
-  // Alterado de Int para String com default uuid()
-  id        String   @id @default(uuid()) 
-  name      String?
-  email     String   @unique
-  password  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String   @id @default(uuid()) @db.Uuid
+  name             String?
+  email            String   @unique
+  password         String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  // O campo que armazena a FK também deve ser String
-  roleId    String
-  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  // FK corrigida para @db.Uuid
+  roleId           String   @db.Uuid
+  role             Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  // FK opcional corrigida para @db.Uuid
+  defaultAddressId String?  @unique @map("default_address_id") @db.Uuid
+
+  addresses        Address[]
 
   @@map("users")
 }
 
+model Address {
+  id           String   @id @default(uuid()) @db.Uuid
+  street       String
+  number       String
+  complement   String?
+  neighborhood String
+  city         String
+  state        String
+  zipCode      String   @map("zip_code")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // FK corrigida para @db.Uuid
+  userId       String   @db.Uuid
+  user         Users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("addresses")
+}
+
 model Products {
-  id          String   @id @default(uuid())
+  id          String   @id @default(uuid()) @db.Uuid
   name        String
   description String?
   price       Decimal  @db.Decimal(10, 2)
@@ -36,11 +59,10 @@ model Products {
 }
 
 model Role {
-  id          String   @id @default(uuid())
-  name        String   @unique
+  id          String           @id @default(uuid()) @db.Uuid
+  name        String           @unique
   description String?
-  createdAt   DateTime @default(now())
-
+  createdAt   DateTime         @default(now())
   users       Users[]
   permissions RolePermission[]
 
@@ -48,21 +70,20 @@ model Role {
 }
 
 model Permission {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  description String? 
-  createdAt   DateTime @default(now())
-
+  id          String           @id @default(uuid()) @db.Uuid
+  name        String           @unique
+  description String?
+  createdAt   DateTime         @default(now())
   roles       RolePermission[]
 
   @@map("permissions")
 }
 
 model RolePermission {
-  // Ambas as FKs agora são String para coincidir com os IDs originais
-  roleId       String
-  permissionId String
-  
+  // FKs corrigidas para @db.Uuid para casar com os IDs
+  roleId       String @db.Uuid
+  permissionId String @db.Uuid
+
   role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
   permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 

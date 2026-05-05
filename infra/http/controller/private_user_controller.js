@@ -10,6 +10,7 @@ export class PrivateUserController {
     this.deletar = this.deletar.bind(this);
     this.alterarCargo = this.alterarCargo.bind(this);
     this.setupAdmin = this.setupAdmin.bind(this);
+    this.definirEnderecoPadrao = this.definirEnderecoPadrao.bind(this);
   }
 
   async listar(req, res) {
@@ -55,6 +56,7 @@ export class PrivateUserController {
 
     return res.status(200).json({ message: 'Deletado com sucesso' });
   }
+  
 
   async alterarCargo(req, res) {
     const { id } = req.params;
@@ -94,5 +96,29 @@ export class PrivateUserController {
     });
 
     return res.status(200).json({ message: 'Logout realizado com sucesso.' });
+  }
+
+  async definirEnderecoPadrao(req, res) {
+    const { addressId } = req.body;
+    const userId = req.user.id; // ID vindo do token JWT via middleware
+
+    if (!addressId) {
+      return res.status(400).json({ message: "O addressId é obrigatório." });
+    }
+
+    // Chama o Use Case injetado na factory
+    const result = await this.useCases.setDefaultAddress.execute({
+      userId,
+      addressId
+    });
+
+    // Tratamento de erro seguindo o padrão isLeft()
+    if (result.isLeft()) {
+      throw result.value;
+    }
+
+    return res.status(200).json({ 
+      message: "Endereço padrão atualizado com sucesso." 
+    });
   }
 }

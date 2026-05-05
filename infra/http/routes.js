@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { makePublicUserController, makePrivateUserController } from '../factories/user_factory.js';
 import { makeProductController } from '../factories/product_factory.js'; // Nova Factory
+import { makeAddressController } from '../factories/address_factory.js'; // Factory de Endereços
 
 import auth from './middlewares/auth.js';
 import checkPermission from './middlewares/checkPermission.js';
@@ -10,14 +11,15 @@ import { validate } from './middlewares/validator.js';
 
 // Schemas
 import { createUserSchema, loginUserSchema, updateProfileSchema, updatePasswordSchema } from '../schemas/user_schemas.js';
-
-import { createProductSchema, updateProductSchema } from '../schemas/product_schemas.js'
+import { createProductSchema, updateProductSchema } from '../schemas/product_schemas.js';
+import { createAddressSchema, updateAddressSchema } from '../schemas/address_schemas.js';
 
 const router = Router();
 
 const publicUserController = makePublicUserController();
 const privateUserController = makePrivateUserController();
 const productController = makeProductController(); // Instância do Controller de Produtos
+const addressController = makeAddressController();
 
 // --- ROTAS PUBLICAS ---
 router.post('/register', validate(createUserSchema), (req, res) => publicUserController.cadastro(req, res));
@@ -38,6 +40,8 @@ router.delete('/users/:id', auth, isOwnerOrAdmin, privateUserController.deletar)
 
 router.post('/logout', auth, (req, res) => privateUserController.logout(req, res));
 
+router.patch('/users/default-address', auth, privateUserController.definirEnderecoPadrao);
+
 // --- ROTAS PRIVADAS: PRODUTOS ---
 
 // Listar produtos (Permissão PRODUCT_READ para Admin e Default)
@@ -57,5 +61,22 @@ router.patch('/products/:id/price', validate(updateProductSchema), auth, checkPe
 
 // Atualizar produto geral (Apenas ADMIN via PRODUCT_UPDATE)
 router.patch('/products/:id', validate(updateProductSchema), auth, checkPermission('PRODUCT_UPDATE'), productController.atualizar);
+
+// --- ROTAS PRIVADAS: ENDEREÇOS ---
+
+// Criar endereço
+router.post('/addresses', auth, validate(createAddressSchema), addressController.adicionar);
+
+// Admin vê endereço de usuário específico
+router.get('/addresses/:id', auth, isOwnerOrAdmin, addressController.buscarPorId);
+
+// Listar todos do usuário
+router.get('/addresses', auth, addressController.listarMeusEnderecos);
+
+// Buscar o padrão atual
+router.get('/addresses/default', auth, addressController.buscarEnderecoPadrao);
+
+// Deletar endereço
+router.delete('/addresses/:id', auth, isOwnerOrAdmin, addressController.deletar);
 
 export default router;

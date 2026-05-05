@@ -12,7 +12,10 @@ export class UserRepository {
       email: userData.email,
       password: userData.password,
       roleId: userData.roleId,
-      createdAt: userData.createdAt
+      // ADIÇÃO: Incluindo o campo de endereço padrão e data de atualização
+      defaultAddressId: userData.defaultAddressId, 
+      createdAt: userData.createdAt,
+      updatedAt: userData.updatedAt
     });
   }
 
@@ -20,7 +23,7 @@ export class UserRepository {
 
   async findById(id) {
     const userData = await prisma.users.findUnique({ 
-      where: { id: (id) } 
+      where: { id: id } 
     });
     return this.#mapToEntity(userData);
   }
@@ -74,15 +77,26 @@ export class UserRepository {
 
   async update(id, data) {
     const updatedUser = await prisma.users.update({
-      where: { id: (id) },
+      where: { id: id },
       data
+    });
+    return this.#mapToEntity(updatedUser);
+  }
+
+  // NOVO MÉTODO: Especificamente para atualizar o endereço padrão (Opção 2)
+  async updateDefaultAddress(userId, addressId) {
+    const updatedUser = await prisma.users.update({
+      where: { id: userId },
+      data: {
+        defaultAddressId: addressId
+      }
     });
     return this.#mapToEntity(updatedUser);
   }
 
   async delete(id) {
     const deletedUser = await prisma.users.delete({
-      where: { id: (id) }
+      where: { id: id }
     });
     return this.#mapToEntity(deletedUser);
   }
